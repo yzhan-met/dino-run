@@ -106,11 +106,11 @@
     </style>
 </head>
 <body>
-    <h1>🦕 Dino Run - Learn to Type! 🦕</h1>
+    <h1 aria-label="Dino Run - Learn to Type!">🦕 Dino Run - Learn to Type! 🦕</h1>
     
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        <div id="keyDisplay">SPACE</div>
+        <canvas id="gameCanvas" width="800" height="400" role="img" aria-label="Game canvas for Dino Run typing game"></canvas>
+        <div id="keyDisplay" role="status" aria-live="polite" aria-atomic="true">SPACE</div>
     </div>
 
     <div id="gameInfo">

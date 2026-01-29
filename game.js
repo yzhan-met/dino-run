@@ -2,12 +2,20 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Game constants
+const GROUND_OFFSET = 60; // Distance from bottom where ground and dino are positioned
+const GROUND_HEIGHT = 50; // Height of the ground strip
+const DINO_WIDTH = 40;
+const DINO_HEIGHT = 50;
+const GRAVITY = 0.6;
+const JUMP_POWER = -12;
+const OBSTACLE_SPEED = 5;
+
 // Game variables
 let gameRunning = false;
 let gameOver = false;
 let score = 0;
 let highScore = localStorage.getItem('dinoHighScore') || 0;
-let obstaclesPassed = 0;
 
 // Display elements
 const keyDisplay = document.getElementById('keyDisplay');
@@ -21,12 +29,12 @@ highScoreDisplay.textContent = highScore;
 // Dino object
 const dino = {
     x: 50,
-    y: canvas.height - 60,
-    width: 40,
-    height: 50,
+    y: canvas.height - GROUND_OFFSET,
+    width: DINO_WIDTH,
+    height: DINO_HEIGHT,
     velocityY: 0,
-    gravity: 0.6,
-    jumpPower: -12,
+    gravity: GRAVITY,
+    jumpPower: JUMP_POWER,
     isJumping: false,
     draw() {
         // Dino body (green)
@@ -56,8 +64,8 @@ const dino = {
         this.y += this.velocityY;
         
         // Ground collision
-        if (this.y >= canvas.height - 60) {
-            this.y = canvas.height - 60;
+        if (this.y >= canvas.height - GROUND_OFFSET) {
+            this.y = canvas.height - GROUND_OFFSET;
             this.velocityY = 0;
             this.isJumping = false;
         }
@@ -73,11 +81,14 @@ const availableKeys = [
 
 // Current jump key
 let currentJumpKey = ' ';
-let lastObstacleX = canvas.width;
 
-// Function to get random key
+// Function to get random key (ensuring it's different from current key)
 function getRandomKey() {
-    return availableKeys[Math.floor(Math.random() * availableKeys.length)];
+    let newKey;
+    do {
+        newKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+    } while (newKey === currentJumpKey);
+    return newKey;
 }
 
 // Function to update key display
@@ -98,8 +109,8 @@ class Obstacle {
         this.width = 30;
         this.height = 50;
         this.x = canvas.width;
-        this.y = canvas.height - 60;
-        this.speed = 5;
+        this.y = canvas.height - GROUND_OFFSET;
+        this.speed = OBSTACLE_SPEED;
         this.passed = false;
     }
     
@@ -119,7 +130,6 @@ class Obstacle {
         // Check if obstacle has been passed
         if (!this.passed && this.x + this.width < dino.x) {
             this.passed = true;
-            obstaclesPassed++;
             score++;
             scoreDisplay.textContent = score;
             
@@ -162,13 +172,13 @@ function drawGround() {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height - 50);
-    ctx.lineTo(canvas.width, canvas.height - 50);
+    ctx.moveTo(0, canvas.height - GROUND_HEIGHT);
+    ctx.lineTo(canvas.width, canvas.height - GROUND_HEIGHT);
     ctx.stroke();
     
     // Ground pattern
     ctx.fillStyle = '#D2B48C';
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 }
 
 // Draw score on canvas
@@ -241,14 +251,13 @@ function startGame() {
     gameRunning = true;
     gameOver = false;
     score = 0;
-    obstaclesPassed = 0;
     obstacles = [];
     scoreDisplay.textContent = score;
     restartBtn.style.display = 'none';
     keyDisplay.style.display = 'block';
     
     // Reset dino position
-    dino.y = canvas.height - 60;
+    dino.y = canvas.height - GROUND_OFFSET;
     dino.velocityY = 0;
     dino.isJumping = false;
     
@@ -267,13 +276,16 @@ function startGame() {
 document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     
-    // Start game on first key press if not running
-    if (!gameRunning && !gameOver) {
+    // Check if correct key is pressed
+    const isCorrectKey = key === currentJumpKey || (currentJumpKey === ' ' && e.code === 'Space');
+    
+    // Start game on first correct key press if not running
+    if (!gameRunning && !gameOver && isCorrectKey) {
         startGame();
     }
     
     // Jump if correct key is pressed
-    if (key === currentJumpKey || (currentJumpKey === ' ' && e.code === 'Space')) {
+    if (isCorrectKey) {
         dino.jump();
         e.preventDefault(); // Prevent page scrolling
     }
