@@ -38,6 +38,10 @@ let configOpen = false;
 let speedMultiplier = 1.0; // Speed multiplier (0.5x to 2x)
 let selectedCharacter = 0; // Index of selected character
 
+// Mobile Detection and Touch Controls
+let isMobile = false;
+let onScreenKeyButton = { x: 0, y: 0, size: 120, visible: false, key: '' };
+
 // Character variants (different colors)
 const characters = [
   { name: 'Green Dino', color: [80, 150, 80] },
@@ -133,6 +137,9 @@ let bgLayers = [];
 function setup() {
   createCanvas(windowWidth, windowHeight);
   groundY = height - 80;
+  
+  // Detect if on mobile device
+  isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
   // Load saved high score from localStorage
   let savedHighScore = localStorage.getItem('dinoRunHighScore');
@@ -230,6 +237,11 @@ function draw() {
   
   // Always draw config button on top
   drawConfigButton();
+  
+  // Draw on-screen keyboard button for mobile
+  if (isMobile && gameState === 'playing' && !configOpen && !isPaused) {
+    drawOnScreenKeyboard();
+  }
   
   // Draw config panel if open
   if (configOpen) {
@@ -624,6 +636,65 @@ class Obstacle {
 }
 
 
+// --- ON-SCREEN KEYBOARD FOR MOBILE ---
+
+function drawOnScreenKeyboard() {
+  // Find the next obstacle to get its jump key
+  let nextObstacle = null;
+  for (let obs of obstacles) {
+    if (!obs.passed) {
+      nextObstacle = obs;
+      break;
+    }
+  }
+  
+  if (!nextObstacle) return;
+  
+  // Position button at bottom center of screen
+  let btnSize = 120;
+  let btnX = width / 2 - btnSize / 2;
+  let btnY = height - btnSize - 40;
+  
+  // Store button position for touch detection
+  onScreenKeyButton.x = btnX;
+  onScreenKeyButton.y = btnY;
+  onScreenKeyButton.size = btnSize;
+  onScreenKeyButton.key = nextObstacle.jumpKey;
+  onScreenKeyButton.visible = true;
+  
+  push();
+  
+  // Button shadow
+  fill(0, 0, 0, 50);
+  noStroke();
+  ellipse(btnX + btnSize/2 + 5, btnY + btnSize/2 + 5, btnSize, btnSize);
+  
+  // Button background
+  fill(255, 200, 0, 230); // Yellow
+  stroke(80);
+  strokeWeight(4);
+  ellipse(btnX + btnSize/2, btnY + btnSize/2, btnSize, btnSize);
+  
+  // Key letter
+  fill(40);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textFont('monospace');
+  textSize(56);
+  textStyle(BOLD);
+  text(nextObstacle.jumpKey, btnX + btnSize/2, btnY + btnSize/2);
+  
+  // Instruction text above button
+  fill(255);
+  stroke(0);
+  strokeWeight(3);
+  textSize(20);
+  text('TAP TO JUMP', width / 2, btnY - 20);
+  
+  pop();
+}
+
+
 // --- CONFIG UI FUNCTIONS ---
 
 function drawConfigButton() {
@@ -844,4 +915,34 @@ function mouseDragged() {
       speedMultiplier = constrain(newSpeed, 0.5, 2.0);
     }
   }
+}
+
+// Touch event handler for mobile devices
+function touchStarted() {
+  // Handle name entry screen touches
+  if (gameState === 'enterName') {
+    // Let keyPressed handle this
+    return false;
+  }
+  
+  // Handle on-screen keyboard button
+  if (isMobile && gameState === 'playing' && !configOpen && !isPaused && onScreenKeyButton.visible) {
+    let touchX = touches.length > 0 ? touches[0].x : mouseX;
+    let touchY = touches.length > 0 ? touches[0].y : mouseY;
+    
+    let btnCenterX = onScreenKeyButton.x + onScreenKeyButton.size / 2;
+    let btnCenterY = onScreenKeyButton.y + onScreenKeyButton.size / 2;
+    let distance = dist(touchX, touchY, btnCenterX, btnCenterY);
+    
+    if (distance < onScreenKeyButton.size / 2) {
+      // Simulate key press for the current jump key
+      key = onScreenKeyButton.key;
+      keyPressed();
+      return false; // Prevent default
+    }
+  }
+  
+  // Let mousePressed handle other interactions
+  mousePressed();
+  return false; // Prevent default touch behavior
 }
